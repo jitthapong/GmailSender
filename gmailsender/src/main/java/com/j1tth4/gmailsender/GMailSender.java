@@ -4,17 +4,11 @@ import android.text.TextUtils;
 
 import com.j1tth4.gmailsender.provider.JSSEProvider;
 
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.io.File;
 import java.security.Security;
-import java.util.ArrayList;
 import java.util.Properties;
 
 import javax.activation.DataHandler;
-import javax.activation.DataSource;
-import javax.activation.FileDataSource;
 import javax.mail.BodyPart;
 import javax.mail.Message;
 import javax.mail.Multipart;
@@ -24,6 +18,7 @@ import javax.mail.Transport;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeBodyPart;
 import javax.mail.internet.MimeMessage;
+import javax.mail.internet.MimeMultipart;
 
 public class GMailSender extends javax.mail.Authenticator {
 
@@ -37,7 +32,7 @@ public class GMailSender extends javax.mail.Authenticator {
     private String recipients;
     private String body;
     private String contentType;
-    private Multipart multipart;
+    private File attachment;
 
     static {
         Security.addProvider(new JSSEProvider());
@@ -66,33 +61,26 @@ public class GMailSender extends javax.mail.Authenticator {
     }
 
     public synchronized void sendMail() throws Exception {
+        Multipart multipart = new MimeMultipart();
+
         MimeMessage message = new MimeMessage(session);
-        DataHandler handler = new DataHandler(new ByteArrayDataSource(body.getBytes(), contentType));
         message.setSender(new InternetAddress(sender));
         message.setSubject(subject);
-        message.setDataHandler(handler);
-        if(multipart != null && multipart.getCount() > 0) {
-            BodyPart messageBodyPart = new MimeBodyPart();
-            messageBodyPart.setText(body);
-            multipart.addBodyPart(messageBodyPart);
-            message.setContent(multipart);
+        message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(recipients));
+
+        BodyPart bodyPart = new MimeBodyPart();
+        DataHandler handler = new DataHandler(body, contentType);
+        bodyPart.setDataHandler(handler);
+        multipart.addBodyPart(bodyPart);
+
+        if(attachment != null) {
+            MimeBodyPart mimeBodyPart = new MimeBodyPart();
+            mimeBodyPart.attachFile(attachment);
+            multipart.addBodyPart(mimeBodyPart);
         }
-        if (recipients.indexOf(',') > 0) {
-            message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(recipients));
-        }else {
-            message.setRecipient(Message.RecipientType.TO, new InternetAddress(recipients));
-        }
+
+        message.setContent(multipart);
         Transport.send(message);
-    }
-
-    public void attachFile(String filename) throws Exception
-    {
-        BodyPart messageBodyPart = new MimeBodyPart();
-        DataSource source = new FileDataSource(filename);
-        messageBodyPart.setDataHandler(new DataHandler(source));
-        messageBodyPart.setFileName(filename);
-
-        multipart.addBodyPart(messageBodyPart);
     }
 
     public static class Builder{
@@ -103,7 +91,7 @@ public class GMailSender extends javax.mail.Authenticator {
         private String recipients;
         private String body;
         private String contentType;
-        private String fileName;
+        private File attachment;
 
         public Builder(String user, String password) {
             this.user = user;
@@ -135,8 +123,8 @@ public class GMailSender extends javax.mail.Authenticator {
             return this;
         }
 
-        public Builder attachFile(String fileName){
-            this.fileName = fileName;
+        public Builder attachFile(File attachment){
+            this.attachment = attachment;
             return this;
         }
 
@@ -147,48 +135,8 @@ public class GMailSender extends javax.mail.Authenticator {
             gmailSender.recipients = recipients;
             gmailSender.body = body;
             gmailSender.contentType = TextUtils.isEmpty(contentType) ? "text/plain" : contentType;
-            if(!TextUtils.isEmpty(fileName))
-                gmailSender.attachFile(fileName);
+            gmailSender.attachment = attachment;
             return gmailSender;
-        }
-    }
-
-    public static class ByteArrayDataSource implements DataSource {
-        private byte[] data;
-        private String type;
-
-        public ByteArrayDataSource(byte[] data, String type) {
-            super();
-            this.data = data;
-            this.type = type;
-        }
-
-        public ByteArrayDataSource(byte[] data) {
-            super();
-            this.data = data;
-        }
-
-        public void setType(String type) {
-            this.type = type;
-        }
-
-        public String getContentType() {
-            if (type == null)
-                return "application/octet-stream";
-            else
-                return type;
-        }
-
-        public InputStream getInputStream() throws IOException {
-            return new ByteArrayInputStream(data);
-        }
-
-        public String getName() {
-            return "ByteArrayDataSource";
-        }
-
-        public OutputStream getOutputStream() throws IOException {
-            throw new IOException("Not Supported");
         }
     }
 }
