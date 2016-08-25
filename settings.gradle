@@ -1,1 +1,1 @@
-include ':gmailsender', ':testsendmail'
+include ':gmailsender', ':testsendmail', ':excelcreator'
