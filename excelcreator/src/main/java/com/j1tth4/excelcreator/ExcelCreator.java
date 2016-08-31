@@ -17,9 +17,10 @@ import jxl.write.WriteException;
  */
 public class ExcelCreator {
 
-    public static void createExcel(File file, String sheet, List<Label> labels){
-        //WorkbookSettings wbSettings = new WorkbookSettings();
-        //wbSettings.setLocale(new Locale("en", "EN"));
+    public static boolean createExcel(File file, String sheet, List<Label> labels){
+        boolean isExport = false;
+        WorkbookSettings wbSettings = new WorkbookSettings();
+        wbSettings.setLocale(new Locale("en", "EN"));
         try {
             WritableWorkbook workbook = Workbook.createWorkbook(file);
             WritableSheet wbSheet = workbook.createSheet(sheet, 0);
@@ -31,8 +32,10 @@ public class ExcelCreator {
                 e.printStackTrace();
             }
             workbook.write();
+            isExport = true;
         } catch (IOException e) {
             e.printStackTrace();
         }
+        return isExport;
     }
 }

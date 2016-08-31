@@ -11,6 +11,7 @@ import java.util.Properties;
 import javax.activation.DataHandler;
 import javax.mail.BodyPart;
 import javax.mail.Message;
+import javax.mail.MessagingException;
 import javax.mail.Multipart;
 import javax.mail.PasswordAuthentication;
 import javax.mail.Session;
@@ -38,7 +39,7 @@ public class GMailSender extends javax.mail.Authenticator {
         Security.addProvider(new JSSEProvider());
     }
 
-    private GMailSender(String user, String password) {
+    private GMailSender(String user, String password) throws MessagingException {
         this.user = user;
         this.password = password;
 
@@ -51,7 +52,7 @@ public class GMailSender extends javax.mail.Authenticator {
         props.put("mail.smtp.socketFactory.port", "465");
         props.put("mail.smtp.socketFactory.class", "javax.net.ssl.SSLSocketFactory");
         props.put("mail.smtp.socketFactory.fallback", "false");
-
+        props.put("mail.smtp.auth.mechanisms", "XOAUTH2");
         session = Session.getDefaultInstance(props, this);
     }
 
