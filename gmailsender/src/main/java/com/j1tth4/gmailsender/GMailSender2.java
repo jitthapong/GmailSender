@@ -1,13 +1,11 @@
 package com.j1tth4.gmailsender;
 
 import android.text.TextUtils;
-import android.util.Log;
 
-import com.sun.mail.smtp.SMTPTransport;
-import com.sun.mail.util.BASE64EncoderStream;
+import com.j1tth4.gmailsender.provider.JSSEProvider;
 
 import java.io.File;
-import java.io.IOException;
+import java.security.Security;
 import java.util.Properties;
 
 import javax.activation.DataHandler;
@@ -15,19 +13,21 @@ import javax.mail.BodyPart;
 import javax.mail.Message;
 import javax.mail.MessagingException;
 import javax.mail.Multipart;
+import javax.mail.PasswordAuthentication;
 import javax.mail.Session;
-import javax.mail.URLName;
+import javax.mail.Transport;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeBodyPart;
 import javax.mail.internet.MimeMessage;
 import javax.mail.internet.MimeMultipart;
 
-public class GMailSender{
+public class GMailSender2 extends javax.mail.Authenticator {
 
-    public static final String TAG = "GMailSender";
+    public static final String TAG = "GMailSender2";
 
+    private String user;
+    private String password;
     private Session session;
-
     private String subject;
     private String sender;
     private String recipients;
@@ -35,37 +35,34 @@ public class GMailSender{
     private String contentType;
     private File attachment;
 
-    private SMTPTransport connectToSmtp(String host, int port, String userEmail,
-                                        String oauthToken, boolean debug) throws MessagingException {
-        Log.v(TAG, "connect smtp server");
-
-        Properties props = new Properties();
-        props.put("mail.smtp.starttls.enable", "true");
-        props.put("mail.smtp.starttls.required", "true");
-        props.put("mail.smtp.sasl.enable", "false");
-
-        session = Session.getInstance(props);
-        session.setDebug(debug);
-
-        final URLName unusedUrlName = null;
-        SMTPTransport transport = new SMTPTransport(session, unusedUrlName);
-        // If the password is non-null, SMTP tries to do AUTH LOGIN.
-        final String emptyPassword = null;
-        transport.connect(host, port, userEmail, emptyPassword);
-
-        byte[] response = String.format("user=%s\1auth=Bearer %s\1\1", userEmail, oauthToken).getBytes();
-        response = BASE64EncoderStream.encode(response);
-
-        Log.v(TAG, "is connect " + transport.isConnected());
-        Log.v(TAG, "response " + new String(response));
-
-        transport.issueCommand("AUTH XOAUTH2 " + new String(response), 235);
-        return transport;
+    static {
+        Security.addProvider(new JSSEProvider());
     }
 
-    public synchronized void sendMail(String user, String oauthToken) throws MessagingException, IOException {
-        SMTPTransport smtpTransport = connectToSmtp("smtp.gmail.com", 587, user, oauthToken, true);
+    private GMailSender2(String user, String password) throws MessagingException {
+        this.user = user;
+        this.password = password;
 
+        Properties props = new Properties();
+        props.setProperty("mail.transport.protocol", "smtp");
+        props.setProperty("mail.host", "smtp.gmail.com");
+        props.setProperty("mail.smtp.quitwait", "false");
+        props.put("mail.smtp.auth", "true");
+        props.put("mail.smtp.port", "465");
+        props.put("mail.smtp.socketFactory.port", "465");
+        props.put("mail.smtp.socketFactory.class", "javax.net.ssl.SSLSocketFactory");
+        props.put("mail.smtp.socketFactory.fallback", "false");
+        props.put("mail.smtp.auth.mechanisms", "XOAUTH2");
+        props.put("mail.debug", "true");
+        session = Session.getDefaultInstance(props, this);
+    }
+
+    @Override
+    protected PasswordAuthentication getPasswordAuthentication() {
+        return new PasswordAuthentication(user, password);
+    }
+
+    public synchronized void sendMail() throws Exception {
         Multipart multipart = new MimeMultipart();
 
         MimeMessage message = new MimeMessage(session);
@@ -87,16 +84,23 @@ public class GMailSender{
         }
 
         message.setContent(multipart);
-        smtpTransport.sendMessage(message, message.getAllRecipients());
+        Transport.send(message);
     }
 
     public static class Builder{
+        private String user;
+        private String password;
         private String subject;
         private String sender;
         private String recipients;
         private String body;
         private String contentType;
         private File attachment;
+
+        public Builder(String user, String password) {
+            this.user = user;
+            this.password = password;
+        }
 
         public Builder subject(String subject){
             this.subject = subject;
@@ -128,8 +132,8 @@ public class GMailSender{
             return this;
         }
 
-        public GMailSender create() throws Exception {
-            GMailSender gmailSender = new GMailSender();
+        public GMailSender2 create() throws Exception {
+            GMailSender2 gmailSender = new GMailSender2(user, password);
             gmailSender.subject = subject;
             gmailSender.sender = sender;
             gmailSender.recipients = recipients;

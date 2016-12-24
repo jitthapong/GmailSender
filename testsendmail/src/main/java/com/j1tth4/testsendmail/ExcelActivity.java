@@ -15,9 +15,12 @@ import android.view.MenuItem;
 import com.google.android.gms.appindexing.Action;
 import com.google.android.gms.appindexing.AppIndex;
 import com.google.android.gms.common.api.GoogleApiClient;
+import com.j1tth4.excelcreator.ExcelCreator;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 
 import jxl.Workbook;
@@ -92,52 +95,63 @@ public class ExcelActivity extends AppCompatActivity {
 
     private void exportToExcel() {
         if(isStoragePermissionGranted()) {
-            final String fileName = "TodoList.xls";
-
-            //Saving file in external storage
-            File sdCard = Environment.getExternalStorageDirectory();
-
-            //file path
-            File file = new File(sdCard, fileName);
-
-            WorkbookSettings wbSettings = new WorkbookSettings();
-            wbSettings.setLocale(new Locale("en", "EN"));
-            WritableWorkbook workbook;
-
-            try {
-                workbook = Workbook.createWorkbook(file, wbSettings);
-                //Excel sheet name. 0 represents first sheet
-                WritableSheet sheet = workbook.createSheet("MyShoppingList", 0);
-
-                try {
-                    sheet.addCell(new Label(0, 0, "Subject")); // column and row
-                    sheet.addCell(new Label(1, 0, "Description"));
-//                if (cursor.moveToFirst()) {
-//                    do {
-//                        String title = cursor.getString(cursor.getColumnIndex(DatabaseHelper.TODO_SUBJECT));
-//                        String desc = cursor.getString(cursor.getColumnIndex(DatabaseHelper.TODO_DESC));
-//
-//                        int i = cursor.getPosition() + 1;
-//                        sheet.addCell(new Label(0, i, title));
-//                        sheet.addCell(new Label(1, i, desc));
-//                    } while (cursor.moveToNext());
-//                }
-//                //closing cursor
-//                cursor.close();
-                } catch (RowsExceededException e) {
-                    e.printStackTrace();
-                } catch (WriteException e) {
-                    e.printStackTrace();
+            List<Label> labels = new ArrayList<>();
+            for(int row = 0; row < 100; row++){
+                for(int col = 0; col < 10; col++){
+                    labels.add(new Label(col, row, "row " + row + " col " + col));
                 }
-                workbook.write();
-                try {
-                    workbook.close();
-                } catch (WriteException e) {
-                    e.printStackTrace();
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
             }
+
+            File sdcard = Environment.getExternalStorageDirectory();
+            File xls = new File(sdcard, "file.xls");
+            ExcelCreator.createExcel(xls, "Sheet1", labels);
+
+//            final String fileName = "TodoList.xls";
+//
+//            //Saving file in external storage
+//            File sdCard = Environment.getExternalStorageDirectory();
+//
+//            //file path
+//            File file = new File(sdCard, fileName);
+//
+//            WorkbookSettings wbSettings = new WorkbookSettings();
+//            wbSettings.setLocale(new Locale("en", "EN"));
+//            WritableWorkbook workbook;
+//
+//            try {
+//                workbook = Workbook.createWorkbook(file, wbSettings);
+//                //Excel sheet name. 0 represents first sheet
+//                WritableSheet sheet = workbook.createSheet("MyShoppingList", 0);
+//
+//                try {
+//                    sheet.addCell(new Label(0, 0, "Subject")); // column and row
+//                    sheet.addCell(new Label(1, 0, "Description"));
+////                if (cursor.moveToFirst()) {
+////                    do {
+////                        String title = cursor.getString(cursor.getColumnIndex(DatabaseHelper.TODO_SUBJECT));
+////                        String desc = cursor.getString(cursor.getColumnIndex(DatabaseHelper.TODO_DESC));
+////
+////                        int i = cursor.getPosition() + 1;
+////                        sheet.addCell(new Label(0, i, title));
+////                        sheet.addCell(new Label(1, i, desc));
+////                    } while (cursor.moveToNext());
+////                }
+////                //closing cursor
+////                cursor.close();
+//                } catch (RowsExceededException e) {
+//                    e.printStackTrace();
+//                } catch (WriteException e) {
+//                    e.printStackTrace();
+//                }
+//                workbook.write();
+//                try {
+//                    workbook.close();
+//                } catch (WriteException e) {
+//                    e.printStackTrace();
+//                }
+//            } catch (IOException e) {
+//                e.printStackTrace();
+//            }
         }
     }
 
